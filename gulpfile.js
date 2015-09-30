@@ -11,7 +11,11 @@ var gulp = require('gulp'),
   tsProject = tsc.createProject('tsconfig.json'),
   browserSync = require('browser-sync'),
   superstatic = require('superstatic'),
-  wiredep = require('wiredep').stream;
+  wiredep = require('wiredep').stream,
+  concat = require('gulp-concat'),
+  uglify = require('gulp-uglify'),
+  replace = require('gulp-replace'),
+  minifyCss = require('gulp-minify-css');
 
 var config = new Config();
 
@@ -34,7 +38,9 @@ var config = new Config();
  * Lint all custom TypeScript files.
  */
 gulp.task('ts-lint', function () {
-  return gulp.src(config.allTypeScript).pipe(tslint()).pipe(tslint.report('prose'));
+  return gulp.src(config.allTypeScript)
+    .pipe(tslint())
+    .pipe(tslint.report('prose'));
 });
 
 /**
@@ -69,37 +75,113 @@ gulp.task('clean-ts', function (cb) {
   del(typeScriptGenFiles, cb);
 });
 
+/**
+ * Inject the bower dependecies and app dependencies into index.html
+ */
 gulp.task('wiredep', function () {
   var target = gulp.src(config.source + 'index.html');
   var sources = gulp.src(config.allSources);
 
   return target.pipe(inject(sources, { relative: true }))
-    .pipe(wiredep({
-      //cwd: config.source
-    }))
+    .pipe(wiredep())
     .pipe(gulp.dest('./src'));
 });
 
+/**
+ * Watch files changes and execute tasks.
+ */
 gulp.task('watch', function () {
   gulp.watch([config.allTypeScript], ['ts-lint', 'compile-ts', 'wiredep']);
 });
 
-gulp.task('serve', ['compile-ts', 'wiredep', 'watch'], function () {
+/**
+ * Serve the app in debug mode.
+ */
+gulp.task('debug', ['compile-ts', 'wiredep', 'watch'], function () {
+  serveApp(['index.html', '**/*.js'], './src', 'debug');
+});
+
+/**
+ * Remove the injected dependencies
+ */
+gulp.task('remove-dep', function () {
+  return gulp.src(config.source + 'index.html')
+    .pipe(replace(/<!-- (.*?):js -->([\S\s]*?)<!-- endinject -->/gmi, '<!-- inject:js -->\n<!-- endinject -->'))
+    .pipe(replace(/<!-- (.*?):css -->([\S\s]*?)<!-- endinject -->/gmi, '<!-- inject:css -->\n<!-- endinject -->'))
+    .pipe(gulp.dest(config.distFolder));
+});
+
+/**
+ * Serve the app in release mode, uglify and concat dependencies.
+ */
+gulp.task('release', ['compile-ts', 'remove-dep'], function () {
+  gulp.src(config.libStyles)
+    .pipe(concat('vendors.css'))
+    .pipe(minifyCss())
+    .pipe(gulp.dest(config.distFolder));
+    
+  gulp.src(config.allStyles)
+  .pipe(concat('styles.css'))
+  .pipe(minifyCss())
+  .pipe(gulp.dest(config.distFolder));
+  
+  gulp.src(config.libScripts)
+    .pipe(concat('vendors.js'))
+    .pipe(uglify())
+    .pipe(gulp.dest(config.distFolder));
+
+  gulp.src(config.allJavaScript)
+    .pipe(concat('app.js'))
+    .pipe(uglify())
+    .pipe(gulp.dest(config.distFolder));
+
+  gulp.src(config.distFolder + 'index.html')
+    .pipe(inject(gulp.src([
+      config.distFolder + 'vendors.css',
+      config.distFolder + 'styles.css',
+      config.distFolder + 'vendors.js',
+      config.distFolder + 'app.js']), { relative: true }))
+  //.pipe(inject(es.merge(vendorStream, appStream)))
+    .pipe(gulp.dest(config.distFolder));
+      
+      serveApp(['index.html', '**/*.js'], './dist', 'silent');
+  //   var vendorStream = gulp.src(config.libScripts)
+  //     .pipe(concat('vendors.js'))
+  //     .pipe(uglify())
+  //     .pipe(gulp.dest(config.distFolder));
+  // 
+  //   var appStream = gulp.src(config.allJavascript)
+  //     .pipe(concat('app.js'))
+  //     .pipe(uglify())
+  //     .pipe(gulp.dest(config.distFolder));
+  // 
+  //   gulp.src(config.distFolder + 'index.html')
+  //     .pipe(inject(gulp.src([config.distFolder + '*.js'])))
+  //     //.pipe(inject(es.merge(vendorStream, appStream)))
+  //     .pipe(gulp.dest(config.distFolder));
+});
+
+gulp.task('default', ['ts-lint', 'compile-ts']);
+
+///////////////////////////////////////////////////////////////////
+
+/**
+ * Serve the app
+ */
+function serveApp(files, baseDir, logLevel) {
   process.stdout.write('Starting browserSync and superstatic...\n');
   browserSync({
     port: 3000,
-    files: ['index.html', '**/*.js'],
+    files: files,
     injectChanges: true,
-    logFileChanges: false,
-    logLevel: 'silent',
+    logFileChanges: true,
+    logLevel: logLevel || 'debug',
     logPrefix: 'angularin20typescript',
     notify: true,
     reloadDelay: 0,
     server: {
-      baseDir: './src',
+      baseDir: baseDir,
       middleware: superstatic({ debug: false })
     }
   });
-});
-
-gulp.task('default', ['ts-lint', 'compile-ts']);
+}

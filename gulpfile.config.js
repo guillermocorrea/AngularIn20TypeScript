@@ -14,6 +14,11 @@ var GulpConfig = (function () {
         
         this.allSources = [this.allJavaScript[0], this.allStyles];
         
+        this.libScripts = [this.source + 'lib/**/*.js'];
+        this.libStyles = [this.source + 'lib/**/*.css'];
+        
+        this.distFolder = './dist/';
+        
         this.typings = './tools/typings/';
         this.libraryTypeScriptDefinitions = './tools/typings/**/*.ts';
     }

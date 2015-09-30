@@ -1,5 +1,5 @@
 ((): void => {
-
+ 
     var app = angular.module('demoApp', ['ngRoute', 'ngAnimate']);
 
     app.config(['$routeProvider', ($routeProvider) => {
