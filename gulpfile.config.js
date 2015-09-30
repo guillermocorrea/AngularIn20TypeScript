@@ -10,6 +10,10 @@ var GulpConfig = (function () {
         this.allJavaScript = [this.source + '/js/**/*.js'];
         this.allTypeScript = this.sourceApp + '/**/*.ts';
 
+        this.allStyles =  this.source + 'styles/**/*.css';
+        
+        this.allSources = [this.allJavaScript[0], this.allStyles];
+        
         this.typings = './tools/typings/';
         this.libraryTypeScriptDefinitions = './tools/typings/**/*.ts';
     }

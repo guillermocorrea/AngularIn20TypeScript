@@ -16,6 +16,12 @@
     },
     "jquery/jquery.d.ts": {
       "commit": "977da240f263e88215a27cb44f2e31524ca07135"
+    },
+    "gulp/gulp.d.ts": {
+      "commit": "30387ec3dd6eb426cc48522fd3aef09ada83aa48"
+    },
+    "bootstrap/bootstrap.d.ts": {
+      "commit": "30387ec3dd6eb426cc48522fd3aef09ada83aa48"
     }
   }
 }

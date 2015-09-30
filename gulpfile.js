@@ -1,16 +1,17 @@
 'use strict';
 
 var gulp = require('gulp'),
-    debug = require('gulp-debug'),
-    inject = require('gulp-inject'),
-    tsc = require('gulp-typescript'),
-    tslint = require('gulp-tslint'),
-    sourcemaps = require('gulp-sourcemaps'),
-    del = require('del'),
-    Config = require('./gulpfile.config'),
-    tsProject = tsc.createProject('tsconfig.json'),
-    browserSync = require('browser-sync'),
-    superstatic = require( 'superstatic' );
+  debug = require('gulp-debug'),
+  inject = require('gulp-inject'),
+  tsc = require('gulp-typescript'),
+  tslint = require('gulp-tslint'),
+  sourcemaps = require('gulp-sourcemaps'),
+  del = require('del'),
+  Config = require('./gulpfile.config'),
+  tsProject = tsc.createProject('tsconfig.json'),
+  browserSync = require('browser-sync'),
+  superstatic = require('superstatic'),
+  wiredep = require('wiredep').stream;
 
 var config = new Config();
 
@@ -33,25 +34,25 @@ var config = new Config();
  * Lint all custom TypeScript files.
  */
 gulp.task('ts-lint', function () {
-    return gulp.src(config.allTypeScript).pipe(tslint()).pipe(tslint.report('prose'));
+  return gulp.src(config.allTypeScript).pipe(tslint()).pipe(tslint.report('prose'));
 });
 
 /**
  * Compile TypeScript and include references to library and app .d.ts files.
  */
 gulp.task('compile-ts', function () {
-    var sourceTsFiles = [config.allTypeScript,                //path to typescript files
-                         config.libraryTypeScriptDefinitions]; //reference to library .d.ts files
+  var sourceTsFiles = [config.allTypeScript,                //path to typescript files
+    config.libraryTypeScriptDefinitions]; //reference to library .d.ts files
                         
 
-    var tsResult = gulp.src(sourceTsFiles)
-                       .pipe(sourcemaps.init())
-                       .pipe(tsc(tsProject));
+  var tsResult = gulp.src(sourceTsFiles)
+    .pipe(sourcemaps.init())
+    .pipe(tsc(tsProject));
 
-        tsResult.dts.pipe(gulp.dest(config.tsOutputPath));
-        return tsResult.js
-                        .pipe(sourcemaps.write('.'))
-                        .pipe(gulp.dest(config.tsOutputPath));
+  tsResult.dts.pipe(gulp.dest(config.tsOutputPath));
+  return tsResult.js
+    .pipe(sourcemaps.write('.'))
+    .pipe(gulp.dest(config.tsOutputPath));
 });
 
 /**
@@ -59,20 +60,31 @@ gulp.task('compile-ts', function () {
  */
 gulp.task('clean-ts', function (cb) {
   var typeScriptGenFiles = [
-                              config.tsOutputPath +'/**/*.js',    // path to all JS files auto gen'd by editor
-                              config.tsOutputPath +'/**/*.js.map', // path to all sourcemap files auto gen'd by editor
-                              '!' + config.tsOutputPath + '/lib'
-                           ];
+    config.tsOutputPath + '/**/*.js',    // path to all JS files auto gen'd by editor
+    config.tsOutputPath + '/**/*.js.map', // path to all sourcemap files auto gen'd by editor
+    '!' + config.tsOutputPath + '/lib'
+  ];
 
   // delete the files
   del(typeScriptGenFiles, cb);
 });
 
-gulp.task('watch', function() {
-    gulp.watch([config.allTypeScript], ['ts-lint', 'compile-ts']);
+gulp.task('wiredep', function () {
+  var target = gulp.src(config.source + 'index.html');
+  var sources = gulp.src(config.allSources);
+
+  return target.pipe(inject(sources, { relative: true }))
+    .pipe(wiredep({
+      //cwd: config.source
+    }))
+    .pipe(gulp.dest('./src'));
 });
 
-gulp.task('serve', ['compile-ts', 'watch'], function() {
+gulp.task('watch', function () {
+  gulp.watch([config.allTypeScript], ['ts-lint', 'compile-ts', 'wiredep']);
+});
+
+gulp.task('serve', ['compile-ts', 'wiredep', 'watch'], function () {
   process.stdout.write('Starting browserSync and superstatic...\n');
   browserSync({
     port: 3000,
@@ -85,7 +97,7 @@ gulp.task('serve', ['compile-ts', 'watch'], function() {
     reloadDelay: 0,
     server: {
       baseDir: './src',
-      middleware: superstatic({ debug: false})
+      middleware: superstatic({ debug: false })
     }
   });
 });

@@ -16,9 +16,7 @@
     "typescript"
   ],
   "license": "ISC",
-  "dependencies": {
-
-  },
+  "dependencies": {},
   "devDependencies": {
     "browser-sync": "^2.8.2",
     "del": "^1.2.1",
@@ -26,10 +24,11 @@
     "gulp-debug": "^2.1.0",
     "gulp-inject": "^1.5.0",
     "gulp-sourcemaps": "^1.5.2",
+    "gulp-tsd": "^0.0.4",
     "gulp-tslint": "^3.2.0",
     "gulp-typescript": "^2.8.0",
-    "gulp-tsd": "^0.0.4",
+    "superstatic": "^1.2.3",
     "tsd": "^0.6.3",
-    "superstatic": "^1.2.3"
+    "wiredep": "^2.2.2"
   }
 }

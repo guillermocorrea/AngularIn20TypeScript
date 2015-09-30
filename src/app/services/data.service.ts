@@ -14,7 +14,7 @@ module demoApp {
     export class DataService {
 
         static $inject = ['$http'];
-        constructor(private $http: ng.IHttpService) {}
+        constructor(private $http: ng.IHttpService) { }
 
         getCustomers(): ng.IPromise<ICustomer[]> {
             return this.$http.get('customers.json').then(response => {
@@ -23,13 +23,13 @@ module demoApp {
         }
 
         getOrder(id: number): ng.IPromise<IOrder[]> {
-            return this.$http.get('orders.json', { id: id }).then(response => {
-               return response.data;
-            });
+            return this.$http.get('orders.json',
+                { id: id }).then(response => {
+                    return response.data;
+                });
         }
     }
 
     angular.module('demoApp')
         .service('demoApp.dataService', DataService);
-
 }

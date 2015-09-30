@@ -26,3 +26,5 @@ src/js
 src/app/**/*.js
 src/app/**/*.js.map
 
+# bower components
+src/lib
