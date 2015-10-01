@@ -15,7 +15,16 @@ var gulp = require('gulp'),
   concat = require('gulp-concat'),
   uglify = require('gulp-uglify'),
   replace = require('gulp-replace'),
-  minifyCss = require('gulp-minify-css');
+  minifyCss = require('gulp-minify-css'),
+  mainBowerFiles = require('gulp-main-bower-files'),
+  vendor = require('gulp-concat-vendor'),
+  gulpFilter = require('gulp-filter'),
+  htmlmin = require('gulp-htmlmin'),
+  angularFilesort = require('gulp-angular-filesort'),
+  order = require("gulp-order"),
+  bower = require('gulp-bower-files'),
+  rename = require('gulp-rename'),
+  bowerMain = require('bower-main');
 
 var config = new Config();
 
@@ -50,7 +59,6 @@ gulp.task('compile-ts', function () {
   var sourceTsFiles = [config.allTypeScript,                //path to typescript files
     config.libraryTypeScriptDefinitions]; //reference to library .d.ts files
                         
-
   var tsResult = gulp.src(sourceTsFiles)
     .pipe(sourcemaps.init())
     .pipe(tsc(tsProject));
@@ -71,7 +79,6 @@ gulp.task('clean-ts', function (cb) {
     '!' + config.tsOutputPath + '/lib'
   ];
 
-  // delete the files
   del(typeScriptGenFiles, cb);
 });
 
@@ -112,27 +119,92 @@ gulp.task('remove-dep', function () {
 });
 
 /**
- * Serve the app in release mode, uglify and concat dependencies.
+ * Optimize the html.
  */
-gulp.task('release', ['compile-ts', 'remove-dep'], function () {
+gulp.task('minify-html', function () {
+  return gulp.src(config.sourceApp + 'views/**/*.html')
+    .pipe(htmlmin({ collapseWhitespace: true }))
+    .pipe(gulp.dest('./dist/app/views'))
+});
+
+/**
+ * Optimize the css.
+ */
+gulp.task('minify-css', function () {
   gulp.src(config.libStyles)
     .pipe(concat('vendors.css'))
     .pipe(minifyCss())
     .pipe(gulp.dest(config.distFolder));
-    
-  gulp.src(config.allStyles)
-  .pipe(concat('styles.css'))
-  .pipe(minifyCss())
-  .pipe(gulp.dest(config.distFolder));
-  
-  gulp.src(config.libScripts)
-    .pipe(concat('vendors.js'))
-    .pipe(uglify())
+
+  return gulp.src(config.allStyles)
+    .pipe(concat('styles.css'))
+    .pipe(minifyCss())
     .pipe(gulp.dest(config.distFolder));
+});
+
+/**
+ * Optimize the js.
+ */
+gulp.task('minify-js', function () {
+  // var filterJS = gulpFilter('**/*.js');
+  // gulp.src('./src/lib/*')
+  //   .pipe(filterJS)
+  //   .pipe(angularFilesort())
+  //   .pipe(vendor('vendors.js'))
+  //   .pipe(gulp.dest('./dist/'));
+  
+  // gulp.src(mainBowerFiles(), { base: 'src/lib' })
+  //   .pipe(order(["*react*", "*requirejs*"])
+  //     .pipe(uglify())
+  //     .pipe(concat(config.all3rdPartyFile))
+  //     .pipe(gulp.dest('./dist/'))
+  //     );
+  
+  var bowerMainJavaScriptFiles = bowerMain('js', 'min.js');
+  gulp.src(bowerMainJavaScriptFiles.normal)
+    .pipe(order(["*jquery*",
+      "*angular.js",
+      "*bootstrap*",
+      "*angular-route*",
+      "*angular-animate*"])
+      )
+  //.pipe(angularFilesort())
+    .pipe(concat('vendors.js'))
+    .pipe(gulp.dest('./dist'));
+  
+      
+  //});
+  
+  //   var filterJS = gulpFilter('**/*.js');
+  // 
+  //   gulp.src('./bower.json')
+  //     .pipe(mainBowerFiles())
+  //     .pipe(filterJS)
+  //   // .pipe(angularFilesort())
+  //     .pipe(order(['**jquery.js', '**bootstrap.js', '**angular.js', '**angular*'])
+  //       .pipe(concat('vendors.js'))
+  //     //.pipe(uglify())
+  //       )
+  //     .pipe(gulp.dest(config.distFolder));
 
   gulp.src(config.allJavaScript)
     .pipe(concat('app.js'))
     .pipe(uglify())
+    .pipe(gulp.dest(config.distFolder));
+});
+
+/**
+ * Delete the ./dist/ folder
+ */
+gulp.task('clean-dist', function () {
+  del.sync(['dist']);
+});
+
+/**
+ * Build the app in release mode, optimize the assets.
+ */
+gulp.task('build', ['clean-dist', 'compile-ts', 'remove-dep', 'minify-html', 'minify-css', 'minify-js'], function () {
+  gulp.src(config.source + '*.json')
     .pipe(gulp.dest(config.distFolder));
 
   gulp.src(config.distFolder + 'index.html')
@@ -141,24 +213,14 @@ gulp.task('release', ['compile-ts', 'remove-dep'], function () {
       config.distFolder + 'styles.css',
       config.distFolder + 'vendors.js',
       config.distFolder + 'app.js']), { relative: true }))
-  //.pipe(inject(es.merge(vendorStream, appStream)))
     .pipe(gulp.dest(config.distFolder));
-      
-      serveApp(['index.html', '**/*.js'], './dist', 'silent');
-  //   var vendorStream = gulp.src(config.libScripts)
-  //     .pipe(concat('vendors.js'))
-  //     .pipe(uglify())
-  //     .pipe(gulp.dest(config.distFolder));
-  // 
-  //   var appStream = gulp.src(config.allJavascript)
-  //     .pipe(concat('app.js'))
-  //     .pipe(uglify())
-  //     .pipe(gulp.dest(config.distFolder));
-  // 
-  //   gulp.src(config.distFolder + 'index.html')
-  //     .pipe(inject(gulp.src([config.distFolder + '*.js'])))
-  //     //.pipe(inject(es.merge(vendorStream, appStream)))
-  //     .pipe(gulp.dest(config.distFolder));
+});
+
+/**
+ * Serve the app in release mode.
+ */
+gulp.task('release', ['build'], function () {
+  serveApp(['index.html', '**/*.js'], './dist', 'silent');
 });
 
 gulp.task('default', ['ts-lint', 'compile-ts']);
