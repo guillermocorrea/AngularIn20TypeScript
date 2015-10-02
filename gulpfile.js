@@ -17,14 +17,9 @@ var gulp = require('gulp'),
   replace = require('gulp-replace'),
   minifyCss = require('gulp-minify-css'),
   mainBowerFiles = require('gulp-main-bower-files'),
-  vendor = require('gulp-concat-vendor'),
   gulpFilter = require('gulp-filter'),
   htmlmin = require('gulp-htmlmin'),
-  angularFilesort = require('gulp-angular-filesort'),
-  order = require("gulp-order"),
-  bower = require('gulp-bower-files'),
-  rename = require('gulp-rename'),
-  bowerMain = require('bower-main');
+  rename = require('gulp-rename');
 
 var config = new Config();
 
@@ -115,6 +110,7 @@ gulp.task('remove-dep', function () {
   return gulp.src(config.source + 'index.html')
     .pipe(replace(/<!-- (.*?):js -->([\S\s]*?)<!-- endinject -->/gmi, '<!-- inject:js -->\n<!-- endinject -->'))
     .pipe(replace(/<!-- (.*?):css -->([\S\s]*?)<!-- endinject -->/gmi, '<!-- inject:css -->\n<!-- endinject -->'))
+    .pipe(htmlmin({ collapseWhitespace: true }))
     .pipe(gulp.dest(config.distFolder));
 });
 
@@ -146,50 +142,18 @@ gulp.task('minify-css', function () {
  * Optimize the js.
  */
 gulp.task('minify-js', function () {
-  // var filterJS = gulpFilter('**/*.js');
-  // gulp.src('./src/lib/*')
-  //   .pipe(filterJS)
-  //   .pipe(angularFilesort())
-  //   .pipe(vendor('vendors.js'))
-  //   .pipe(gulp.dest('./dist/'));
-  
-  // gulp.src(mainBowerFiles(), { base: 'src/lib' })
-  //   .pipe(order(["*react*", "*requirejs*"])
-  //     .pipe(uglify())
-  //     .pipe(concat(config.all3rdPartyFile))
-  //     .pipe(gulp.dest('./dist/'))
-  //     );
-  
-  var bowerMainJavaScriptFiles = bowerMain('js', 'min.js');
-  gulp.src(bowerMainJavaScriptFiles.normal)
-    .pipe(order(["*jquery*",
-      "*angular.js",
-      "*bootstrap*",
-      "*angular-route*",
-      "*angular-animate*"])
-      )
-  //.pipe(angularFilesort())
+  var filterJS = gulpFilter('**/*.js');
+
+  gulp.src('./bower.json')
+    .pipe(mainBowerFiles())
+    .pipe(filterJS)
     .pipe(concat('vendors.js'))
-    .pipe(gulp.dest('./dist'));
-  
-      
-  //});
-  
-  //   var filterJS = gulpFilter('**/*.js');
-  // 
-  //   gulp.src('./bower.json')
-  //     .pipe(mainBowerFiles())
-  //     .pipe(filterJS)
-  //   // .pipe(angularFilesort())
-  //     .pipe(order(['**jquery.js', '**bootstrap.js', '**angular.js', '**angular*'])
-  //       .pipe(concat('vendors.js'))
-  //     //.pipe(uglify())
-  //       )
-  //     .pipe(gulp.dest(config.distFolder));
+    .pipe(uglify())
+    .pipe(gulp.dest(config.distFolder));
 
   gulp.src(config.allJavaScript)
     .pipe(concat('app.js'))
-    .pipe(uglify())
+    .pipe(uglify({ mangle: false }))
     .pipe(gulp.dest(config.distFolder));
 });
 

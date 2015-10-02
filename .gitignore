@@ -30,3 +30,5 @@ src/app/**/*.js.map
 src/lib
 
 dist/
+
+npm-debug.log
